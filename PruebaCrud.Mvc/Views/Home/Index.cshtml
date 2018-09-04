@@ -1,0 +1,196 @@
+﻿@{
+    ViewData["Title"] = "Inicio";
+}
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="panel">
+            <div class="panel-heading">
+                <h4>Pedidos</h4>
+                <button class="btn btn-success" onclick="showForm('create')"><i class="glyphicon glyphicon-plus"></i>Agregar</button>
+                <button class="btn btn-default" onclick="getAll()"><i class="glyphicon glyphicon-refresh"></i>Actualizar</button>
+            </div>
+            <div class="panel-body">
+                <table id="tablaPedidos" class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th>PRODUCTO</th>
+                            <th>DESCRIPCION</th>
+                            <th colspan="3">ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modal_form" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h3 class="modal-title">Agregar Pedidos</h3>
+                </div>
+                <div class="modal-body">
+                    <form action="#" id="form" class="form-horizontal">
+                        <input id="id" type="hidden" />
+                        <div class="form-group">
+                            <label class="control-label col-md-3">Producto</label>
+                            <div class="col-md-9">
+                                <input name="producto" class="form-control" type="text">
+                                <span class="help-block"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label col-md-3">Descripcion</label>
+                            <div class="col-md-9">
+                                <input name="descripcion" class="form-control" type="text">
+                                <span class="help-block"></span>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="btnSave" onclick="save()" class="btn btn-primary">Guardar</button>
+                    <button type="button" class="btn btn-danger" data-dismiss="modal">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script type="text/javascript">
+
+        var table;
+        var uri = 'http://localhost:38859/api/pedido';
+        var dataType = 'application/x-www-form-urlencoded; charset=utf-8';
+
+        $(function () {
+            getAll();
+
+        });
+
+
+        function getAll() {
+            $.ajax({
+                type: 'GET',
+                url: uri,
+                success: function (data) {
+                    $('#tablaPedidos tbody').empty();
+                    $.each(data,
+                        function (key, item) {
+                            $('<tr>' +
+                                '<td>' + item.producto + '</td>' + '<td>' + item.descripcion + '</td>' +
+                                '<td><button onclick="showForm(' + "'show'" + ',' + item.id + ')">Mostrar</button></td>' +
+                                '<td><button onclick="showForm(' + "'update'" + ',' + item.id + ')">Actualizar</button></td>' +
+                                '<td><button onclick="remove(' + item.id + ')">Eliminar</button></td>' +
+                                '</tr>')
+                                .appendTo($('#tablaPedidos'));
+                        });
+
+                    todos = data;
+                }
+            });
+        }
+ 
+        function save() {
+            $('#btnSave').text('Guardando...');
+            $('#btnSave').attr('disabled', true);
+            var id = $('#id').val();
+            var url = uri;
+            var type = "POST";         
+
+            if (id != "") {
+                type = "PUT";
+                url = uri + '/' + id;
+            }
+            
+            var data = $('#form').serialize();
+            
+            $.ajax({
+                url: url,
+                dataType: 'json',
+                crossDomain: true,
+                contentType: dataType,
+                data: data,
+                type: type
+            }).done(function (data) {
+                getAll();
+            }).fail(function (jqXHR, textStatus) {
+                console.log(jqXHR);
+                alert("Ocurrio un error al guardar los datos");
+            }).always(function () {
+                $('#modal_form').modal('hide');
+                $('#btnSave').text('Guardar');
+                $('#btnSave').attr('disabled', false);
+            });
+        }
+        
+        function remove(id) {
+            $.ajax({
+                url: uri + '/' + id,
+                crossDomain: true,                
+                type: 'DELETE'
+            }).done(function (data) {
+                getAll();
+            }).fail(function (jqXHR, textStatus) {
+                alert("Ocurrio un error al eliminar los datos");
+            }).always(function () {
+                $('#modal_form').modal('hide');
+                $('#btnSave').text('Guardar');
+                $('#btnSave').attr('disabled', false);
+            });
+        }
+
+        function get(id) {
+            $.ajax({
+                url: uri + '/' + id,
+                crossDomain: true,          
+                type: 'GET'
+            }).done(function (data) {
+                console.log(data.id);
+                $('#id').val(data.id);
+                $('input[name="producto"]').val(data.producto);
+                $('input[name="descripcion"]').val(data.descripcion);
+            }).fail(function (jqXHR, textStatus) {
+                alert("Ocurrio un error al obtener los datos");                
+            }).always(function () {                
+                $('#btnSave').text('Guardar');
+                $('#btnSave').attr('disabled', false);
+            });
+        }
+
+        function showForm(action, id) {
+            $('#form')[0].reset();
+            $('#btnSave').attr('disabled', false);
+            $('#btnSave').css('display', "");
+            $('input').attr('disabled', false);
+
+            $('.form-group').removeClass('has-error');
+            $('.help-block').empty();
+            $('#modal_form').modal('show');
+
+            switch (action) {
+                case "create":
+                    $('.modal-title').text('Agregar Producto');
+                    break;
+                case "show":                    
+                    $('.modal-title').text('Producto');
+                    get(id);
+                    $('input').attr('disabled', true);
+                    $('#btnSave').css('display', "none");
+                    break;
+                case "update":
+                    $('.modal-title').text('Actualizar Producto');
+                    get(id);
+                    break;
+                
+                default:
+                    break;
+            }
+        }
+
+    </script>
+}
